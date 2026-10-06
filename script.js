@@ -50,14 +50,125 @@ function normalizeRow(x){
   return {
     id:x.id,nama:x.nama,kecamatan:x.kecamatan,komoditas:x.komoditas,jenis:x.jenis||"",
     alamat:x.alamat||"",telepon:x.telepon||"",luas:Number(x.luas)||0,produksi:Number(x.produksi)||0,
-    status:x.status||"Aktif",verifikasi:x.verifikasi||"Belum Diverifikasi"
+    status:x.status||"Aktif",verifikasi:x.verifikasi||"Belum Diverifikasi",updatedAt:x.updated_at||x.created_at||null
   };
 }
 
 async function saveRow(row){
-  const payload={nama:row.nama,kecamatan:row.kecamatan,komoditas:row.komoditas,jenis:row.jenis,alamat:row.alamat,telepon:row.telepon,luas:row.luas,produksi:row.produksi,status:row.status,verifikasi:row.verifikasi};
+  const payload={nama:row.nama,kecamatan:row.kecamatan,komoditas:row.komoditas,jenis:row.jenis,alamat:row.alamat,telepon:row.telepon,luas:row.luas,produksi:row.produksi,status:row.status,verifikasi:row.verifikasi,updated_at:new Date().toISOString()};
   if(row.id){payload.id=row.id; return supabaseClient.from("penangkar").update(payload).eq("id",row.id);}
   return supabaseClient.from("penangkar").insert(payload);
+}
+
+let pendingSpreadsheetRows=[];
+
+function importHeaderKey(value){
+  return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+}
+
+function importNumber(value,label,rowNumber,issues){
+  if(value===""||value==null)return 0;
+  let parsed=value;
+  if(typeof value==="string"){
+    parsed=value.trim().replace(/\s/g,"");
+    if(parsed.includes(","))parsed=parsed.replace(/\./g,"").replace(",", ".");
+  }
+  const number=Number(parsed);
+  if(!Number.isFinite(number)||number<0){issues.push(`Baris ${rowNumber}: ${label} harus berupa angka nol atau lebih.`);return null;}
+  return number;
+}
+
+function existingRecordKey(row){
+  return [row.nama,row.kecamatan,row.komoditas].map(value=>String(value??"").trim().toLocaleLowerCase("id-ID")).join("|");
+}
+
+async function readSpreadsheet(file){
+  if(!editor){toast("Hanya Petugas UPTD yang dapat mengimpor data.");return;}
+  if(!file)return;
+  if(file.size>10*1024*1024){toast("Ukuran file maksimal 10 MB.");return;}
+  if(!window.XLSX){toast("Pembaca spreadsheet gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.");return;}
+  try{
+    const workbook=XLSX.read(await file.arrayBuffer(),{type:"array"});
+    const sheetName=workbook.SheetNames.find(name=>importHeaderKey(name)==="datapenangkar")||workbook.SheetNames[0];
+    const sheet=workbook.Sheets[sheetName];
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:true,blankrows:false});
+    const aliases={
+      nama:["namapenangkar","nama"],kecamatan:["kecamatan"],komoditas:["komoditas"],jenis:["jenisbenih","jenis"],
+      alamat:["alamat"],telepon:["notelepon","telepon","nomorhp"],luas:["luaslahanha","luaslahan","luas"],
+      produksi:["kapasitasproduksiton","kapasitasproduksi","produksi"],status:["status"],verifikasi:["statusverifikasi","verifikasi"]
+    };
+    let headerIndex=-1,indexes={};
+    for(let i=0;i<Math.min(rows.length,20);i++){
+      const normalized=rows[i].map(importHeaderKey);
+      const found={};
+      Object.entries(aliases).forEach(([field,names])=>{found[field]=normalized.findIndex(key=>names.includes(key));});
+      if(found.nama>=0&&found.kecamatan>=0&&found.komoditas>=0){headerIndex=i;indexes=found;break;}
+    }
+    if(headerIndex<0)throw new Error("Header wajib Nama Penangkar, Kecamatan, dan Komoditas tidak ditemukan. Gunakan template dari website.");
+
+    const districtsByKey=new Map(districts.map(name=>[importHeaderKey(name),name]));
+    const statuses=new Map([["aktif","Aktif"],["nonaktif","Nonaktif"]]);
+    const verifications=new Map([["terverifikasi","Terverifikasi"],["dalamproses","Dalam Proses"],["belumdiverifikasi","Belum Diverifikasi"]]);
+    const seen=new Set(data.map(existingRecordKey));
+    const valid=[],issues=[];let duplicates=0,emptyRows=0;
+    for(let i=headerIndex+1;i<rows.length;i++){
+      const cells=rows[i];
+      if(!cells.some(value=>String(value??"").trim())){emptyRows++;continue;}
+      const get=field=>indexes[field]>=0?cells[indexes[field]]??"":"";
+      const rowNumber=i+1;
+      const nama=String(get("nama")).trim(),komoditas=String(get("komoditas")).trim();
+      const kecamatan=districtsByKey.get(importHeaderKey(get("kecamatan")));
+      const rowIssues=[];
+      if(!nama)rowIssues.push(`Baris ${rowNumber}: Nama Penangkar wajib diisi.`);
+      if(!kecamatan)rowIssues.push(`Baris ${rowNumber}: Kecamatan tidak valid atau kosong.`);
+      if(!komoditas)rowIssues.push(`Baris ${rowNumber}: Komoditas wajib diisi.`);
+      const luas=importNumber(get("luas"),"Luas Lahan",rowNumber,rowIssues);
+      const produksi=importNumber(get("produksi"),"Kapasitas Produksi",rowNumber,rowIssues);
+      const statusText=String(get("status")).trim();
+      const verificationText=String(get("verifikasi")).trim();
+      const status=statusText?statuses.get(importHeaderKey(statusText)):"Aktif";
+      const verifikasi=verificationText?verifications.get(importHeaderKey(verificationText)):"Dalam Proses";
+      if(statusText&&!status)rowIssues.push(`Baris ${rowNumber}: Status harus Aktif atau Nonaktif.`);
+      if(verificationText&&!verifikasi)rowIssues.push(`Baris ${rowNumber}: Status Verifikasi tidak dikenal.`);
+      if(rowIssues.length){issues.push(...rowIssues);continue;}
+      const row={nama,kecamatan,komoditas,jenis:String(get("jenis")).trim(),alamat:String(get("alamat")).trim(),telepon:String(get("telepon")).trim(),luas,produksi,status,verifikasi};
+      const key=existingRecordKey(row);
+      if(seen.has(key)){duplicates++;continue;}
+      seen.add(key);valid.push(row);
+    }
+    if(valid.length>2000)throw new Error("Maksimal 2.000 baris data dapat diimpor sekaligus.");
+    if(!valid.length&&!issues.length)throw new Error("Tidak ada data baru untuk diimpor.");
+    pendingSpreadsheetRows=valid;
+    renderSpreadsheetPreview({fileName:file.name,valid,issues,duplicates,emptyRows});
+  }catch(error){console.error(error);toast(error.message||"File tidak dapat dibaca. Pastikan formatnya XLSX, XLS, atau CSV.");}
+}
+
+function renderSpreadsheetPreview({fileName,valid,issues,duplicates,emptyRows}){
+  const panel=$("#spreadsheetImport");
+  panel.hidden=false;
+  $("#importSummaryText").textContent=`${fileName}: ${valid.length} baris siap diimpor; ${duplicates} duplikat dilewati; ${issues.length} masalah validasi; ${emptyRows} baris kosong.`;
+  $("#importIssues").textContent=issues.length?`Periksa file dan unggah ulang untuk memperbaiki data yang dilewati. ${issues.slice(0,5).join(" ")}${issues.length>5?` Dan ${issues.length-5} masalah lainnya.`:""}`:"Baris duplikat berdasarkan nama, kecamatan, dan komoditas dilewati agar data lama tidak tertimpa.";
+  $("#importIssues").hidden=!issues.length&&!duplicates;
+  $("#importPreviewHead").innerHTML="<tr><th>Nama Penangkar</th><th>Kecamatan</th><th>Komoditas</th><th>Kapasitas (Ton)</th><th>Status</th></tr>";
+  $("#importPreviewBody").innerHTML=valid.slice(0,5).map(row=>`<tr><td>${esc(row.nama)}</td><td>${esc(row.kecamatan)}</td><td>${esc(row.komoditas)}</td><td>${esc(row.produksi)}</td><td>${esc(row.status)}</td></tr>`).join("")||`<tr><td colspan="5">Tidak ada baris valid baru.</td></tr>`;
+  $("#confirmSpreadsheetImport").disabled=!valid.length;
+  $("#confirmSpreadsheetImport").textContent=valid.length?`Impor ${valid.length} Data`:"Tidak Ada Data Baru";
+}
+
+async function confirmSpreadsheetImport(){
+  if(!editor||!pendingSpreadsheetRows.length)return;
+  const button=$("#confirmSpreadsheetImport");button.disabled=true;button.textContent="Mengimpor...";
+  const updatedAt=new Date().toISOString();
+  const payload=pendingSpreadsheetRows.map(row=>({...row,updated_at:updatedAt}));
+  const {error}=await supabaseClient.from("penangkar").insert(payload);
+  if(error){console.error(error);toast("Impor gagal. Tidak ada data yang berhasil disimpan.");button.disabled=false;button.textContent=`Impor ${pendingSpreadsheetRows.length} Data`;return;}
+  const count=pendingSpreadsheetRows.length;
+  pendingSpreadsheetRows=[];$("#spreadsheetImport").hidden=true;$("#spreadsheetFile").value="";
+  await loadData(false);toast(`${count} data penangkar berhasil diimpor.`);
+}
+
+function cancelSpreadsheetImport(){
+  pendingSpreadsheetRows=[];$("#spreadsheetImport").hidden=true;$("#spreadsheetFile").value="";
 }
 
 function renderTable(){
@@ -69,16 +180,22 @@ function renderTable(){
 function renderStats(){
   $("#totalCount").textContent=data.length;
   $("#activeCount").textContent=data.filter(x=>x.status==="Aktif").length;
+  const seedAvailability=data.reduce((total,row)=>total+(Number(row.produksi)||0),0);
+  $("#seedAvailability").textContent=new Intl.NumberFormat("id-ID",{maximumFractionDigits:2}).format(seedAvailability);
   let comm=[...new Set(data.map(x=>x.komoditas))];
   $("#commodityCount").textContent=comm.length;
-  $("#updateCount").textContent=data.filter(x=>x.verifikasi!=="Terverifikasi").length;
+  const oneMonthAgo=new Date();oneMonthAgo.setMonth(oneMonthAgo.getMonth()-1);
+  $("#updateCount").textContent=data.filter(x=>{
+    const lastUpdated=x.updatedAt?new Date(x.updatedAt):null;
+    return !lastUpdated||Number.isNaN(lastUpdated.getTime())||lastUpdated<=oneMonthAgo;
+  }).length;
   let by={};data.forEach(x=>by[x.kecamatan]=(by[x.kecamatan]||0)+1);
   let max=Math.max(...Object.values(by),1);
   $("#barChart").innerHTML=Object.entries(by).map(([k,v])=>`<div class="bar"><b>${v}</b><i style="height:${(v/max)*165}px"></i><span>${esc(k)}</span></div>`).join("");
   let cb={};data.forEach(x=>cb[x.komoditas]=(cb[x.komoditas]||0)+1);
   $("#commodityList").innerHTML=Object.entries(cb).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="commodity-row"><span>${esc(k)}</span><b>${v} penangkar</b></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
   let verified=data.filter(x=>x.verifikasi==="Terverifikasi").length,pct=data.length?Math.round(verified/data.length*100):0;
-  $(".donut").style.setProperty("--percent",pct+"%");$("#verifiedPercent").textContent=pct+"%";
+  $(".donut").style.setProperty("--percent",pct+"%");$(".donut").classList.toggle("is-empty",data.length===0);$("#verifiedPercent").textContent=pct+"%";
   $("#verifySummary").innerHTML=`<p>🟢 Terverifikasi: <b>${verified}</b></p><p>🟡 Dalam Proses: <b>${data.filter(x=>x.verifikasi==="Dalam Proses").length}</b></p><p>🔴 Belum Diverifikasi: <b>${data.filter(x=>x.verifikasi==="Belum Diverifikasi").length}</b></p>`;
   $("#commodityCards").innerHTML=Object.entries(cb).map(([k,v])=>`<div class="commodity-card">🌿<strong>${v}</strong><b>${esc(k)}</b><p class="muted">Penangkar terdaftar</p></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
   $("#mapGrid").innerHTML=Object.entries(by).map(([k,v])=>`<div class="map-pin">📍<b>${v}</b><span>${esc(k)}</span></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
@@ -88,6 +205,9 @@ function renderVerify(){
   $("#verifyTable").innerHTML=data.map(x=>`<tr><td>${esc(x.nama)}</td><td>${esc(x.kecamatan)}</td><td>${esc(x.komoditas)}</td><td><span class="status ${cls(x.verifikasi)}">${esc(x.verifikasi)}</span></td><td><select onchange="changeVerify(${x.id},this.value)"><option ${x.verifikasi==="Terverifikasi"?"selected":""}>Terverifikasi</option><option ${x.verifikasi==="Dalam Proses"?"selected":""}>Dalam Proses</option><option ${x.verifikasi==="Belum Diverifikasi"?"selected":""}>Belum Diverifikasi</option></select></td></tr>`).join("");
 }
 function renderAll(){renderStats();renderTable();renderVerify()}
+
+// Refresh age-based update reminders while the dashboard stays open.
+setInterval(renderStats,60*1000);
 
 function detail(id){
   let x=data.find(a=>a.id===id); if(!x)return;
@@ -113,7 +233,7 @@ async function deleteData(id){
 
 async function changeVerify(id,v){
   if(!editor){renderVerify();return}
-  const {error}=await supabaseClient.from("penangkar").update({verifikasi:v}).eq("id",id);
+  const {error}=await supabaseClient.from("penangkar").update({verifikasi:v,updated_at:new Date().toISOString()}).eq("id",id);
   if(error){console.error(error);toast("Gagal memperbarui verifikasi.");return;}
   toast("Status verifikasi diperbarui.");
   await loadData(false);
@@ -175,6 +295,10 @@ function subscribeRealtime(){
 
 $$(".nav").forEach(n=>n.onclick=()=>showPage(n.dataset.page));
 $("#addFromData").onclick=()=>showPage("input");
+$("#uploadSpreadsheetButton").onclick=()=>$("#spreadsheetFile").click();
+$("#spreadsheetFile").onchange=e=>readSpreadsheet(e.target.files?.[0]);
+$("#confirmSpreadsheetImport").onclick=confirmSpreadsheetImport;
+$("#cancelSpreadsheetImport").onclick=cancelSpreadsheetImport;
 $("#searchData").oninput=renderTable;$("#filterDistrict").onchange=renderTable;
 $("#loginForm").onsubmit=e=>{e.preventDefault();login()};
 $("#guestBtn").onclick=async()=>{editor=false;$("#loginOverlay").style.display="none";setAccess();await loadData();toast("Masuk sebagai pengunjung. Data hanya dapat dilihat.")};

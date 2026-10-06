@@ -51,7 +51,7 @@
           <div class="stat"><span>👨‍🌾</span><div><small>Total Penangkar</small><strong id="totalCount">0</strong><em>penangkar</em></div></div>
           <div class="stat"><span>✓</span><div><small>Penangkar Aktif</small><strong id="activeCount">0</strong><em>penangkar</em></div></div>
           <div class="stat"><span>🌿</span><div><small>Komoditas</small><strong id="commodityCount">0</strong><em>jenis</em></div></div>
-          <div class="stat"><span>📦</span><div><small>Ketersediaan Benih</small><strong>45,6</strong><em>ton</em></div></div>
+          <div class="stat"><span>📦</span><div><small>Ketersediaan Benih</small><strong id="seedAvailability">0</strong><em>ton</em></div></div>
           <div class="stat"><span>📝</span><div><small>Perlu Pembaruan</small><strong id="updateCount">0</strong><em>data</em></div></div>
         </div>
         <div class="cards-grid">
@@ -75,7 +75,13 @@
       </section>
 
       <section id="input" class="page editor-page">
-        <div class="section-head"><div><h2 id="formTitle">Input & Pembaruan Data</h2><p>Lengkapi informasi penangkar secara akurat.</p></div></div>
+        <div class="section-head"><div><h2 id="formTitle">Input & Pembaruan Data</h2><p>Lengkapi informasi penangkar secara akurat.</p></div><div class="data-actions input-data-actions"><a class="secondary editor-only spreadsheet-link" href="https://docs.google.com/spreadsheets/d/14-KDIcd6VEOPEuvYV_9yNuedpuGXVYc_bIolOGyGcDM/edit" target="_blank" rel="noopener">Buka Template Google Sheets</a><button type="button" class="primary editor-only" id="uploadSpreadsheetButton">Upload Spreadsheet</button><input id="spreadsheetFile" type="file" accept=".xlsx,.xls,.csv" hidden></div></div>
+        <p class="import-help">Isi template di browser, lalu unduh sebagai Excel (.xlsx) sebelum mengunggahnya di sini.</p>
+        <div id="spreadsheetImport" class="import-panel" hidden>
+          <div class="import-summary"><div><b>Pratinjau impor</b><p id="importSummaryText" class="muted"></p></div><div class="import-actions"><button type="button" class="secondary" id="cancelSpreadsheetImport">Batal</button><button type="button" class="primary" id="confirmSpreadsheetImport">Impor Data</button></div></div>
+          <p id="importIssues" class="import-issues"></p>
+          <div class="table-wrap"><table><thead id="importPreviewHead"></thead><tbody id="importPreviewBody"></tbody></table></div>
+        </div>
         <form id="penangkarForm" class="form-card">
           <input type="hidden" id="editId">
           <div class="form-grid">
@@ -119,6 +125,7 @@
   <div id="modal" class="modal"><div class="modal-content"><button id="closeModal">×</button><div id="modalBody"></div></div></div>
   <div id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="supabase.js"></script>
   <script src="script.js"></script>
 </body>
