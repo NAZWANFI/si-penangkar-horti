@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI PENANGKAR HORTI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="loginOverlay" class="overlay">
+    <div class="login-card">
+      <div class="logo">🌱</div>
+      <h1>SI PENANGKAR HORTI</h1>
+      <p>Sistem Informasi Penangkar Terintegrasi Hortikultura</p>
+      <form id="loginForm">
+        <input id="username" type="email" placeholder="Email" autocomplete="username" required>
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+        <button type="submit">Masuk</button>
+      </form>
+      <button id="guestBtn" class="guest">Masuk sebagai Pengunjung</button>
+      <small>Petugas masuk menggunakan akun Supabase. Pengunjung hanya dapat melihat data.</small>
+      <div id="loginMessage"></div>
+    </div>
+  </div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span>🌱</span><div><b>SI PENANGKAR HORTI</b><small>Sistem Informasi Penangkar</small></div></div>
+      <nav>
+        <button class="nav active" data-page="dashboard">⌂ Dashboard</button>
+        <button class="nav" data-page="data">👨‍🌾 Data Penangkar</button>
+        <button class="nav" data-page="komoditas">🌿 Komoditas & Benih</button>
+        <button class="nav" data-page="peta">📍 Peta Sebaran</button>
+        <button class="nav editor-only" data-page="input">✎ Input & Pembaruan Data</button>
+        <button class="nav editor-only" data-page="verifikasi">✓ Verifikasi Data</button>
+        <button class="nav" data-page="laporan">▤ Laporan</button>
+        <button class="nav editor-only" data-page="pengaturan">⚙ Pengaturan</button>
+      </nav>
+      <div class="user-box"><b id="roleLabel">Pengunjung</b><span id="roleText">Akses lihat data</span><button id="logoutBtn">Keluar / Ganti Akses</button></div>
+    </aside>
+
+    <main>
+      <header>
+        <div><button id="menuBtn" class="mobile-menu">☰</button><span id="pageTitle">Dashboard</span></div>
+        <div class="header-right"><span id="accessBadge" class="badge view">MODE PENGUNJUNG</span><span id="today"></span></div>
+      </header>
+
+      <section id="dashboard" class="page active">
+        <div class="intro"><h2>Ringkasan Data Penangkar Benih Hortikultura</h2><p>Data terintegrasi untuk mendukung pembinaan dan pengambilan keputusan.</p></div>
+        <div class="stats">
+          <div class="stat"><span>👨‍🌾</span><div><small>Total Penangkar</small><strong id="totalCount">0</strong><em>penangkar</em></div></div>
+          <div class="stat"><span>✓</span><div><small>Penangkar Aktif</small><strong id="activeCount">0</strong><em>penangkar</em></div></div>
+          <div class="stat"><span>🌿</span><div><small>Komoditas</small><strong id="commodityCount">0</strong><em>jenis</em></div></div>
+          <div class="stat"><span>📦</span><div><small>Ketersediaan Benih</small><strong>45,6</strong><em>ton</em></div></div>
+          <div class="stat"><span>📝</span><div><small>Perlu Pembaruan</small><strong id="updateCount">0</strong><em>data</em></div></div>
+        </div>
+        <div class="cards-grid">
+          <div class="panel"><h3>Sebaran Penangkar per Kecamatan</h3><div id="barChart" class="bar-chart"></div></div>
+          <div class="panel"><h3>Komoditas Terbanyak</h3><div id="commodityList"></div></div>
+          <div class="panel"><h3>Status Verifikasi</h3><div class="donut-wrap"><div class="donut"><b id="verifiedPercent">0%</b><span>Terverifikasi</span></div><div id="verifySummary"></div></div></div>
+        </div>
+      </section>
+
+      <section id="data" class="page">
+        <div class="section-head"><div><h2>Data Penangkar</h2><p>Database penangkar benih hortikultura</p></div><button class="primary editor-only" data-page="input" id="addFromData">+ Tambah Penangkar</button></div>
+        <div class="toolbar"><input id="searchData" placeholder="Cari nama, kecamatan, atau komoditas..."><select id="filterDistrict"><option value="">Semua Kecamatan</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>No</th><th>Nama Penangkar</th><th>Kecamatan</th><th>Komoditas</th><th>Status</th><th>Verifikasi</th><th>Aksi</th></tr></thead><tbody id="dataTable"></tbody></table></div>
+      </section>
+
+      <section id="komoditas" class="page"><div class="section-head"><div><h2>Komoditas & Benih</h2><p>Ringkasan komoditas yang dikelola penangkar.</p></div></div><div id="commodityCards" class="commodity-cards"></div></section>
+
+      <section id="peta" class="page">
+        <h2>Peta Sebaran Penangkar</h2><p class="muted">Visualisasi sederhana berdasarkan kecamatan.</p>
+        <div id="mapGrid" class="map-grid"></div>
+      </section>
+
+      <section id="input" class="page editor-page">
+        <div class="section-head"><div><h2 id="formTitle">Input & Pembaruan Data</h2><p>Lengkapi informasi penangkar secara akurat.</p></div></div>
+        <form id="penangkarForm" class="form-card">
+          <input type="hidden" id="editId">
+          <div class="form-grid">
+            <label>Nama Penangkar*<input id="nama" required></label>
+            <label>Kecamatan*<select id="kecamatan" required></select></label>
+            <label>Komoditas*<input id="komoditasInput" required placeholder="Contoh: Cabai"></label>
+            <label>Jenis Benih<input id="jenisBenih" placeholder="Contoh: Benih Sebar"></label>
+            <label>Alamat<textarea id="alamat" rows="2"></textarea></label>
+            <label>No. Telepon<input id="telepon"></label>
+            <label>Luas Lahan (Ha)<input id="luas" type="number" step="0.1"></label>
+            <label>Kapasitas Produksi (Ton)<input id="produksi" type="number" step="0.1"></label>
+            <label>Status<select id="status"><option>Aktif</option><option>Nonaktif</option></select></label>
+            <label>Status Verifikasi<select id="verifikasiInput"><option>Dalam Proses</option><option>Terverifikasi</option><option>Belum Diverifikasi</option></select></label>
+          </div>
+          <div class="form-actions"><button type="button" id="cancelEdit" class="secondary">Batal</button><button class="primary" type="submit">Simpan Data</button></div>
+        </form>
+      </section>
+
+      <section id="verifikasi" class="page editor-page">
+        <h2>Verifikasi Data</h2><p class="muted">Ubah status verifikasi data penangkar.</p>
+        <div class="table-wrap"><table><thead><tr><th>Nama</th><th>Kecamatan</th><th>Komoditas</th><th>Status Saat Ini</th><th>Aksi</th></tr></thead><tbody id="verifyTable"></tbody></table></div>
+      </section>
+
+      <section id="laporan" class="page">
+        <h2>Laporan</h2><p class="muted">Cetak ringkasan data sesuai kebutuhan.</p>
+        <div class="report-grid">
+          <button class="report-btn" data-report="Daftar Penangkar">📄<b>Daftar Penangkar</b><span>Seluruh data penangkar</span></button>
+          <button class="report-btn" data-report="Laporan per Kecamatan">📊<b>Laporan per Kecamatan</b><span>Rekap berdasarkan wilayah</span></button>
+          <button class="report-btn" data-report="Laporan Komoditas">🌿<b>Laporan Komoditas</b><span>Rekap jenis komoditas</span></button>
+          <button class="report-btn" data-report="Status Verifikasi">✓<b>Status Verifikasi</b><span>Rekap validasi data</span></button>
+        </div>
+      </section>
+
+      <section id="pengaturan" class="page editor-page">
+        <h2>Pengaturan Pengguna</h2><p class="muted">Prototype pengelolaan akses pengguna.</p>
+        <div class="panel"><h3>Akun Aktif</h3><p><b>Username:</b> petugasUPTD</p><p><b>Peran:</b> Petugas UPTD / Editor</p><p class="muted">Untuk keamanan aplikasi produksi, kata sandi harus dikelola melalui sistem autentikasi server.</p></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal"><div class="modal-content"><button id="closeModal">×</button><div id="modalBody"></div></div></div>
+  <div id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
