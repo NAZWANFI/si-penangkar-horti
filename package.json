@@ -1,0 +1,16 @@
+{
+  "name": "si-penangkar-horti",
+  "version": "1.0.0",
+  "description": "SI PENANGKAR HORTI desktop app",
+  "main": "main.js",
+  "author": "SI PENANGKAR HORTI",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-forge make"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "latest",
+    "electron": "latest"
+  }
+}
