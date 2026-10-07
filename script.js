@@ -1,6 +1,7 @@
 let data = [];
 let editor = false;
 let realtimeChannel = null;
+let districtMapSignature = null;
 const districts = ["Batujajar","Cihampelas","Cikalong Wetan","Cililin","Cipeundeuy","Cipatat","Cipongkor","Cisarua","Gununghalu","Lembang","Ngamprah","Padalarang","Parongpong","Rongga","Saguling","Sindangkerta"];
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -166,6 +167,69 @@ function renderTable(){
   $("#dataTable").innerHTML=rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x.nama)}</b></td><td>${esc(x.kecamatan)}</td><td>${esc(x.komoditas)}</td><td><span class="status ${cls(x.status)}">${esc(x.status)}</span></td><td><span class="status ${cls(x.verifikasi)}">${esc(x.verifikasi)}</span></td><td><button class="icon-btn" onclick="detail(${x.id})">👁</button>${editor?`<button class="icon-btn" onclick="editData(${x.id})">✎</button><button class="icon-btn delete" onclick="deleteData(${x.id})">🗑</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7">Data tidak ditemukan.</td></tr>`;
 }
 
+function mapDistrictKey(value){
+  return importHeaderKey(value).replace(/kabupaten|kecamatan/g,"");
+}
+
+function districtRings(geometry){
+  if(geometry.type==="Polygon")return geometry.coordinates;
+  if(geometry.type==="MultiPolygon")return geometry.coordinates.flat();
+  return [];
+}
+
+function districtCoordinates(feature){
+  return districtRings(feature.geometry).flat(1).filter(point=>Array.isArray(point)&&point.length>=2);
+}
+
+function renderDistrictMap(containerId, countByDistrict, compact=false){
+  const container=$(containerId);
+  const features=window.districtBoundaries?.features||[];
+  if(!features.length){container.innerHTML="<p class='muted'>Batas kecamatan tidak tersedia.</p>";return;}
+
+  const points=features.flatMap(districtCoordinates);
+  const width=800,height=590,padding=28;
+  const mercator=lat=>Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
+  const projected=points.map(([lon,lat])=>[lon*Math.PI/180,mercator(lat)]);
+  const minX=Math.min(...projected.map(point=>point[0])),maxX=Math.max(...projected.map(point=>point[0]));
+  const minY=Math.min(...projected.map(point=>point[1])),maxY=Math.max(...projected.map(point=>point[1]));
+  const scale=Math.min((width-padding*2)/(maxX-minX),(height-padding*2)/(maxY-minY));
+  const offsetX=(width-(maxX-minX)*scale)/2,offsetY=(height-(maxY-minY)*scale)/2;
+  const project=([lon,lat])=>[offsetX+(lon*Math.PI/180-minX)*scale,height-offsetY-(mercator(lat)-minY)*scale];
+  const paths=features.map(feature=>{
+    const name=feature.properties.WADMKC;
+    const count=countByDistrict.get(mapDistrictKey(name))||0;
+    const d=districtRings(feature.geometry).map(ring=>ring.map((point,i)=>{
+      const [x,y]=project(point);return `${i?"L":"M"}${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ")+" Z").join(" ");
+    const coords=districtCoordinates(feature);
+    const center=coords.reduce((sum,point)=>{const [x,y]=project(point);sum[0]+=x;sum[1]+=y;return sum;},[0,0]).map(value=>value/coords.length);
+    const label=compact?"":`<text class="district-label" x="${center[0].toFixed(1)}" y="${center[1].toFixed(1)}">${esc(name)}</text>`;
+    return `<g class="district-feature ${count?"has-data":"empty"}" data-name="${esc(name)}" data-count="${count}" tabindex="0" role="img" aria-label="Kecamatan ${esc(name)}, ${count} penangkar"><path d="${d}"/><title>Kecamatan ${esc(name)} — ${count} penangkar</title>${label}</g>`;
+  }).join("");
+  const svg=`<svg class="district-map-svg" viewBox="0 0 ${width} ${height}" role="group" aria-label="Peta 16 kecamatan Kabupaten Bandung Barat">${paths}</svg><div class="district-map-tooltip" role="status" hidden></div>`;
+  container.innerHTML=`<div class="district-map-frame ${compact?"is-compact":""}">${svg}</div>${compact?"":`<div class="district-map-legend"><span><i class="legend-swatch empty"></i>Belum ada data</span><span><i class="legend-swatch has-data"></i>Ada penangkar</span></div>`}`;
+  const frame=container.querySelector(".district-map-frame"),tip=container.querySelector(".district-map-tooltip");
+  const showTooltip=(feature,event)=>{
+    tip.textContent=`${feature.dataset.name}: ${feature.dataset.count} penangkar`;
+    tip.hidden=false;
+    const bounds=frame.getBoundingClientRect();
+    const target=event.type==="focus"?feature.querySelector("path").getBBox():null;
+    const scaleX=bounds.width/width,scaleY=bounds.height/height;
+    const left=event.type==="focus"?(target.x+target.width/2)*scaleX:event.clientX-bounds.left;
+    const top=event.type==="focus"?(target.y+target.height/2)*scaleY:event.clientY-bounds.top;
+    tip.style.left=`${Math.max(8,Math.min(bounds.width-220,left+12))}px`;
+    tip.style.top=`${Math.max(8,Math.min(bounds.height-48,top-34))}px`;
+  };
+  container.querySelectorAll(".district-feature").forEach(feature=>{
+    feature.addEventListener("pointerenter",event=>showTooltip(feature,event));
+    feature.addEventListener("pointermove",event=>showTooltip(feature,event));
+    feature.addEventListener("pointerleave",event=>{if(event.pointerType!=="touch")tip.hidden=true;});
+    feature.addEventListener("focus",event=>showTooltip(feature,event));
+    feature.addEventListener("blur",()=>{tip.hidden=true;});
+    feature.addEventListener("click",event=>{feature.focus();showTooltip(feature,event);});
+  });
+}
+
 function renderStats(){
   $("#totalCount").textContent=data.length;
   $("#activeCount").textContent=data.filter(x=>x.status==="Aktif").length;
@@ -178,16 +242,20 @@ function renderStats(){
     const lastUpdated=x.updatedAt?new Date(x.updatedAt):null;
     return !lastUpdated||Number.isNaN(lastUpdated.getTime())||lastUpdated<=oneMonthAgo;
   }).length;
-  let by={};data.forEach(x=>by[x.kecamatan]=(by[x.kecamatan]||0)+1);
-  let max=Math.max(...Object.values(by),1);
-  $("#barChart").innerHTML=Object.entries(by).map(([k,v])=>`<div class="bar"><b>${v}</b><i style="height:${(v/max)*165}px"></i><span>${esc(k)}</span></div>`).join("");
+  const byDistrict=new Map();
+  data.forEach(row=>{const key=mapDistrictKey(row.kecamatan);byDistrict.set(key,(byDistrict.get(key)||0)+1);});
+  const mapSignature=JSON.stringify([...byDistrict]);
+  if(mapSignature!==districtMapSignature){
+    renderDistrictMap("#dashboardDistrictMap",byDistrict,true);
+    renderDistrictMap("#mapGrid",byDistrict,false);
+    districtMapSignature=mapSignature;
+  }
   let cb={};data.forEach(x=>cb[x.komoditas]=(cb[x.komoditas]||0)+1);
   $("#commodityList").innerHTML=Object.entries(cb).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="commodity-row"><span>${esc(k)}</span><b>${v} penangkar</b></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
   let verified=data.filter(x=>x.verifikasi==="Terverifikasi").length,pct=data.length?Math.round(verified/data.length*100):0;
   $(".donut").style.setProperty("--percent",pct+"%");$(".donut").classList.toggle("is-empty",data.length===0);$("#verifiedPercent").textContent=pct+"%";
   $("#verifySummary").innerHTML=`<p>🟢 Terverifikasi: <b>${verified}</b></p><p>🟡 Dalam Proses: <b>${data.filter(x=>x.verifikasi==="Dalam Proses").length}</b></p><p>🔴 Belum Diverifikasi: <b>${data.filter(x=>x.verifikasi==="Belum Diverifikasi").length}</b></p>`;
   $("#commodityCards").innerHTML=Object.entries(cb).map(([k,v])=>`<div class="commodity-card">🌿<strong>${v}</strong><b>${esc(k)}</b><p class="muted">Penangkar terdaftar</p></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
-  $("#mapGrid").innerHTML=Object.entries(by).map(([k,v])=>`<div class="map-pin">📍<b>${v}</b><span>${esc(k)}</span></div>`).join("")||"<p class='muted'>Belum ada data.</p>";
 }
 
 function renderVerify(){

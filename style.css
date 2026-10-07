@@ -82,6 +82,36 @@ header{margin:0 -32px 28px;padding:0 32px;min-height:78px;height:auto;gap:18px}
   .import-summary{align-items:flex-start;flex-direction:column}
   .import-actions{justify-content:flex-start}
 }
+
+/* Administrative district maps */
+.district-map{min-width:0}
+.district-map-frame{position:relative;width:100%;overflow:hidden;border-radius:12px;background:#f6f9f6}
+.district-map-svg{display:block;width:100%;height:auto;max-height:72vh}
+.district-feature{cursor:pointer;outline:none}
+.district-feature path{fill:#dfe4e1;stroke:#fff;stroke-width:1.8;vector-effect:non-scaling-stroke;transition:fill .15s ease,filter .15s ease}
+.district-feature.has-data path{fill:#2d9661}
+.district-feature:hover path,.district-feature:focus path{fill:#0c6037;filter:drop-shadow(0 1px 2px #203a2880)}
+.district-feature.empty:hover path,.district-feature.empty:focus path{fill:#aab5ad}
+.district-label{fill:#173e2a;font-size:13px;font-weight:700;text-anchor:middle;dominant-baseline:middle;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.district-map-tooltip{position:absolute;z-index:2;max-width:210px;padding:9px 12px;border-radius:8px;background:#173e2a;color:#fff;font-size:12px;font-weight:700;line-height:1.4;box-shadow:0 4px 14px #0003;pointer-events:none;white-space:nowrap}
+.district-map-tooltip[hidden]{display:none}
+.district-map-legend{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:14px;color:#58665c;font-size:13px}
+.district-map-legend span{display:flex;align-items:center;gap:7px}
+.legend-swatch{display:inline-block;width:13px;height:13px;border-radius:3px;background:#dfe4e1;border:1px solid #cbd4cd}
+.legend-swatch.has-data{background:#2d9661;border-color:#2d9661}
+.dashboard-map-panel{display:flex;flex-direction:column}
+.dashboard-map-panel .district-map-frame{flex:1;display:flex;align-items:center}
+.district-map-compact .district-map-frame{min-height:205px}
+.district-map-compact .district-map-svg{max-height:250px}
+.district-map-full .district-map-frame{max-width:900px;margin:20px auto 0;border:1px solid #e1e9e2}
+.district-map-full .district-map-svg{max-height:72vh}
+@media(max-width:750px){
+  .district-map-full{overflow-x:auto;padding-bottom:4px}
+  .district-map-full .district-map-frame{width:560px;max-width:none;margin:14px 0 0}
+  .district-map-full .district-map-svg{max-height:none}
+  .district-map-legend{justify-content:flex-start;font-size:12px;gap:14px}
+  .district-map-compact .district-map-frame{min-height:180px}
+}
 .spreadsheet-link{display:inline-flex;align-items:center;text-decoration:none}
 .import-help{margin:-5px 0 14px;color:#718077;font-size:13px;line-height:1.5}
 @media(max-width:750px){.input-data-actions{width:100%}}

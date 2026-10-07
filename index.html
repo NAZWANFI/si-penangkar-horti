@@ -55,7 +55,7 @@
           <div class="stat"><span>📝</span><div><small>Perlu Pembaruan</small><strong id="updateCount">0</strong><em>data</em></div></div>
         </div>
         <div class="cards-grid">
-          <div class="panel"><h3>Sebaran Penangkar per Kecamatan</h3><div id="barChart" class="bar-chart"></div></div>
+          <div class="panel dashboard-map-panel"><h3>Sebaran Penangkar per Kecamatan</h3><div id="dashboardDistrictMap" class="district-map district-map-compact"></div></div>
           <div class="panel"><h3>Komoditas Terbanyak</h3><div id="commodityList"></div></div>
           <div class="panel"><h3>Status Verifikasi</h3><div class="donut-wrap"><div class="donut"><b id="verifiedPercent">0%</b><span>Terverifikasi</span></div><div id="verifySummary"></div></div></div>
         </div>
@@ -70,8 +70,8 @@
       <section id="komoditas" class="page"><div class="section-head"><div><h2>Komoditas & Benih</h2><p>Ringkasan komoditas yang dikelola penangkar.</p></div></div><div id="commodityCards" class="commodity-cards"></div></section>
 
       <section id="peta" class="page">
-        <h2>Peta Sebaran Penangkar</h2><p class="muted">Visualisasi sederhana berdasarkan kecamatan.</p>
-        <div id="mapGrid" class="map-grid"></div>
+        <h2>Peta Sebaran Penangkar</h2><p class="muted">Peta administratif Kabupaten Bandung Barat. Arahkan kursor atau pilih kecamatan untuk melihat jumlah penangkar.</p>
+        <div id="mapGrid" class="district-map district-map-full"></div>
       </section>
 
       <section id="input" class="page editor-page">
@@ -126,6 +126,7 @@
   <div id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="district-boundaries.js"></script>
   <script src="supabase.js"></script>
   <script src="script.js"></script>
 </body>
