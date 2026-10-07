@@ -21,10 +21,30 @@ create table if not exists public.penangkar (
   luas numeric(10,2) default 0,
   produksi numeric(10,2) default 0,
   status text not null default 'Aktif' check (status in ('Aktif','Nonaktif')),
+  status_sertifikat text not null default 'Belum Bersertifikat' check (status_sertifikat in ('Bersertifikat','Belum Bersertifikat')),
+  keterangan_sertifikat text not null default '',
   verifikasi text not null default 'Belum Diverifikasi' check (verifikasi in ('Terverifikasi','Dalam Proses','Belum Diverifikasi')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Kolom baru untuk database yang tabel penangkar-nya sudah pernah dibuat.
+alter table public.penangkar
+  add column if not exists status_sertifikat text not null default 'Belum Bersertifikat',
+  add column if not exists keterangan_sertifikat text not null default '';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'penangkar_status_sertifikat_check'
+      and conrelid = 'public.penangkar'::regclass
+  ) then
+    alter table public.penangkar
+      add constraint penangkar_status_sertifikat_check
+      check (status_sertifikat in ('Bersertifikat','Belum Bersertifikat'));
+  end if;
+end $$;
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -92,6 +112,39 @@ create policy "penangkar_delete_editor"
 on public.penangkar for delete
 to authenticated
 using (public.is_editor());
+
+-- Galeri foto dashboard: semua pengunjung dapat melihat, hanya editor dapat mengunggah.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'dashboard-gallery',
+  'dashboard-gallery',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set name = excluded.name,
+    public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "gallery_photos_public_select" on storage.objects;
+create policy "gallery_photos_public_select"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'dashboard-gallery');
+
+drop policy if exists "gallery_photos_editor_insert" on storage.objects;
+create policy "gallery_photos_editor_insert"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'dashboard-gallery' and public.is_editor());
+
+drop policy if exists "gallery_photos_editor_delete" on storage.objects;
+create policy "gallery_photos_editor_delete"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'dashboard-gallery' and public.is_editor());
 
 -- Aktifkan Realtime untuk tabel penangkar.
 do $$

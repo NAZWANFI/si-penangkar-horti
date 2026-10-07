@@ -5,6 +5,7 @@ SI PENANGKAR HORTI - Panduan pemasangan
 - Masuk SQL Editor.
 - Buka database.sql dari folder ini.
 - Copy seluruh isinya ke SQL Editor lalu Run.
+- SQL juga membuat bucket Storage publik `dashboard-gallery` (maksimal foto 5 MB). Foto bisa dilihat publik; hanya akun dengan role `editor` yang dapat mengunggah.
 
 2. BUAT AKUN PETUGAS
 - Masuk Authentication > Users.
@@ -35,3 +36,7 @@ CATATAN KEAMANAN
 - File supabase.js menggunakan publishable key, bukan secret key.
 - Jangan memasukkan sb_secret_... atau service_role key ke HTML/JS.
 - Keamanan perubahan data bergantung pada Row Level Security di database.sql.
+
+ATRIBUSI LOGO
+- Lambang Kabupaten Bandung Barat: Wikimedia Commons, “Kab Bandung Barat.svg”, karya Pemerintah Kabupaten Bandung Barat, vektor oleh Hafidh Ihromi, lisensi CC BY-SA 4.0.
+- Sumber: https://commons.wikimedia.org/wiki/File:Kab_Bandung_Barat.svg
