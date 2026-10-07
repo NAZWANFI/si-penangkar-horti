@@ -93,20 +93,6 @@ on public.penangkar for delete
 to authenticated
 using (public.is_editor());
 
--- Data awal dari prototype.
-insert into public.penangkar (nama,kecamatan,komoditas,jenis,alamat,telepon,luas,produksi,status,verifikasi)
-select * from (values
-('Kelompok Tani Jaya','Lembang','Cabai','Benih Sebar','Lembang','081234567801',2.5,5,'Aktif','Terverifikasi'),
-('UD. Tani Subur','Ngamprah','Kentang','Benih','Ngamprah','081234567802',4,8,'Aktif','Dalam Proses'),
-('Kelompok Tani Mekar','Padalarang','Bawang Merah','Benih Sebar','Padalarang','081234567803',1.8,3.5,'Aktif','Dalam Proses'),
-('CV. Horti Lestari','Cipatat','Tomat','Benih','Cipatat','081234567804',3,6,'Nonaktif','Belum Diverifikasi'),
-('Kelompok Tani Harapan','Rongga','Kangkung','Benih','Rongga','081234567805',2,4,'Aktif','Terverifikasi'),
-('KWT Cibodas','Cikalong Wetan','Cabai','Benih Sebar','Cikalong Wetan','081234567806',1.2,2.4,'Aktif','Terverifikasi'),
-('Gapoktan Makmur','Gununghalu','Tomat','Benih','Gununghalu','081234567807',2.8,5.6,'Aktif','Dalam Proses'),
-('Tani Mandiri','Cipeundeuy','Kentang','Benih','Cipeundeuy','081234567808',5,10,'Aktif','Terverifikasi')
-) as v(nama,kecamatan,komoditas,jenis,alamat,telepon,luas,produksi,status,verifikasi)
-where not exists (select 1 from public.penangkar);
-
 -- Aktifkan Realtime untuk tabel penangkar.
 do $$
 begin

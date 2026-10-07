@@ -1,18 +1,7 @@
-const seedData = [
-  {id:1,nama:"Kelompok Tani Jaya",kecamatan:"Lembang",komoditas:"Cabai",jenis:"Benih Sebar",alamat:"Lembang",telepon:"081234567801",luas:2.5,produksi:5,status:"Aktif",verifikasi:"Terverifikasi"},
-  {id:2,nama:"UD. Tani Subur",kecamatan:"Ngamprah",komoditas:"Kentang",jenis:"Benih",alamat:"Ngamprah",telepon:"081234567802",luas:4,produksi:8,status:"Aktif",verifikasi:"Dalam Proses"},
-  {id:3,nama:"Kelompok Tani Mekar",kecamatan:"Padalarang",komoditas:"Bawang Merah",jenis:"Benih Sebar",alamat:"Padalarang",telepon:"081234567803",luas:1.8,produksi:3.5,status:"Aktif",verifikasi:"Dalam Proses"},
-  {id:4,nama:"CV. Horti Lestari",kecamatan:"Cipatat",komoditas:"Tomat",jenis:"Benih",alamat:"Cipatat",telepon:"081234567804",luas:3,produksi:6,status:"Nonaktif",verifikasi:"Belum Diverifikasi"},
-  {id:5,nama:"Kelompok Tani Harapan",kecamatan:"Rongga",komoditas:"Kangkung",jenis:"Benih",alamat:"Rongga",telepon:"081234567805",luas:2,produksi:4,status:"Aktif",verifikasi:"Terverifikasi"},
-  {id:6,nama:"KWT Cibodas",kecamatan:"Cikalong Wetan",komoditas:"Cabai",jenis:"Benih Sebar",alamat:"Cikalong Wetan",telepon:"081234567806",luas:1.2,produksi:2.4,status:"Aktif",verifikasi:"Terverifikasi"},
-  {id:7,nama:"Gapoktan Makmur",kecamatan:"Gununghalu",komoditas:"Tomat",jenis:"Benih",alamat:"Gununghalu",telepon:"081234567807",luas:2.8,produksi:5.6,status:"Aktif",verifikasi:"Dalam Proses"},
-  {id:8,nama:"Tani Mandiri",kecamatan:"Cipeundeuy",komoditas:"Kentang",jenis:"Benih",alamat:"Cipeundeuy",telepon:"081234567808",luas:5,produksi:10,status:"Aktif",verifikasi:"Terverifikasi"}
-];
-
 let data = [];
 let editor = false;
 let realtimeChannel = null;
-const districts = ["Cipatat","Cikalong Wetan","Gununghalu","Lembang","Ngamprah","Padalarang","Rongga","Cipeundeuy"];
+const districts = ["Batujajar","Cihampelas","Cikalong Wetan","Cililin","Cipeundeuy","Cipatat","Cipongkor","Cisarua","Gununghalu","Lembang","Ngamprah","Padalarang","Parongpong","Rongga","Saguling","Sindangkerta"];
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
@@ -288,7 +277,7 @@ function subscribeRealtime(){
     }).subscribe();
 }
 
-["Cipatat","Cikalong Wetan","Gununghalu","Lembang","Ngamprah","Padalarang","Rongga","Cipeundeuy"].forEach(d=>{
+districts.forEach(d=>{
   $("#filterDistrict").insertAdjacentHTML("beforeend",`<option>${d}</option>`);
   $("#kecamatan").insertAdjacentHTML("beforeend",`<option>${d}</option>`);
 });
