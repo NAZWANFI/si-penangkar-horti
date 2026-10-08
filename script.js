@@ -192,7 +192,7 @@ function canonicalSeedType(value){
 }
 
 function productionUnitForSeedType(value){
-  return canonicalSeedType(value)==="Bibit"?"Pohon":"kg";
+  return canonicalSeedType(value)==="Bibit"?"Batang":"kg";
 }
 
 function isUpdateOverdue(row,now=new Date()){
@@ -212,7 +212,7 @@ function formatUpdateDate(value){
 function updateProductionUnit(){
   const unit=productionUnitForSeedType($("#jenisBenih").value);
   $("#productionUnit").textContent=unit;
-  $("#produksi").step=unit==="Pohon"?"1":"0.1";
+  $("#produksi").step=unit==="Batang"?"1":"0.1";
   $("#produksi").setAttribute("aria-label",`Kapasitas Produksi (${unit})`);
 }
 
@@ -245,7 +245,7 @@ async function readSpreadsheet(file){
     const aliases={
       nama:["namapenangkar","nama"],kecamatan:["kecamatan"],komoditas:["komoditas"],jenis:["jenisbenih","jenis"],
       alamat:["alamat"],telepon:["notelepon","telepon","nomorhp"],luas:["luaslahanha","luaslahan","luas"],
-      produksi:["kapasitasproduksikg","kapasitasproduksipohon","kapasitasproduksiton","kapasitasproduksi","produksi"],
+      produksi:["kapasitasproduksikg","kapasitasproduksibatang","kapasitasproduksipohon","kapasitasproduksiton","kapasitasproduksi","produksi"],
       status:["statusoperasional","statuspenangkar","status"],statusSertifikat:["statussertifikat","statussertifikasi"],
       keteranganSertifikat:["keterangansertifikat","nomorsertifikat","detailsertifikat"],verifikasi:["statusverifikasi","verifikasi"]
     };
@@ -260,7 +260,7 @@ async function readSpreadsheet(file){
 
     const districtsByKey=new Map(districts.map(name=>[importHeaderKey(name),name]));
     const capacityHeader=importHeaderKey(rows[headerIndex][indexes.produksi]);
-    const capacityHeaderUnit=capacityHeader.includes("ton")?"Ton":capacityHeader.includes("pohon")?"Pohon":capacityHeader.includes("kg")?"kg":null;
+    const capacityHeaderUnit=capacityHeader.includes("ton")?"Ton":capacityHeader.includes("batang")||capacityHeader.includes("pohon")?"Batang":capacityHeader.includes("kg")?"kg":null;
     const statuses=new Map([["aktif","Aktif"],["nonaktif","Nonaktif"]]);
     const verifications=new Map([["terverifikasi","Terverifikasi"],["dalamproses","Dalam Proses"],["belumdiverifikasi","Belum Diverifikasi"]]);
     const seen=new Set(data.map(existingRecordKey));

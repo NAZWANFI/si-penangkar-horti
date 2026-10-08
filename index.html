@@ -6,6 +6,7 @@
   <title>SI PENANGKAR HORTI</title>
   <link rel="icon" type="image/png" href="assets/logo-penangkar.png">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="fixes.css">
 </head>
 <body>
   <div id="loginOverlay" class="overlay">
@@ -15,15 +16,15 @@
         <div class="agency-copy"><strong>UPTD Hortikultura</strong><span>Dinas Ketahanan Pangan dan Pertanian</span><span>Kabupaten Bandung Barat</span></div>
       </div>
       <img class="login-logo" src="assets/logo-penangkar.png" alt="Logo SI Penangkar Horti">
-      <h1>SI PENANGKAR HORTI</h1>
-      <p>Sistem Informasi Penangkar Terintegrasi Hortikultura</p>
+      <h2>SI PENANGKAR HORTI</h2>
+      <small>Sistem Informasi Penangkar Terintegrasi Hortikultura</small>
       <form id="loginForm">
         <input id="username" type="email" placeholder="Email" autocomplete="username" required>
         <input id="password" type="password" placeholder="Password" autocomplete="current-password">
         <button type="submit">Masuk</button>
       </form>
       <button id="guestBtn" class="guest">Masuk sebagai Pengunjung</button>
-      <small>Petugas masuk menggunakan akun Supabase. Pengunjung hanya dapat melihat data.</small>
+      <!--<small>Petugas masuk menggunakan akun Supabase. Pengunjung hanya dapat melihat data.</small>-->
       <div id="loginMessage"></div>
     </div>
   </div>
@@ -151,5 +152,6 @@
   <script src="district-boundaries.js"></script>
   <script src="supabase.js"></script>
   <script src="script.js"></script>
+  <script src="fixes.js"></script>
 </body>
 </html>
